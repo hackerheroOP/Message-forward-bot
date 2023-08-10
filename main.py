@@ -1,83 +1,58 @@
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import os
-from telegram import Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext, CallbackQueryHandler
 
-# Set up environment variables
+# Set up your API credentials from environment variables
+API_ID = os.getenv("API_ID")
+API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
-# Conversation states
-CHOOSING, CONFIRM = range(2)
+app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Dictionary to store user data
-user_data = {}
+# Handle /start command
+@app.on_message(filters.command("start"))
+def start(bot, update):
+    chat_id = update.chat.id
+    bot.send_message(chat_id, "Hi! I am your message forwarding bot. Send /cancel to stop.")
 
-# Start command handler
-def start(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text("Hi! I am your message forwarding bot. Send /cancel to stop.")
+# Handle choosing source channel
+@app.on_message(filters.text & ~filters.command)
+def choose_source(bot, update):
+    chat_id = update.chat.id
+    user_data[chat_id]["source"] = update.text
+    bot.send_message(chat_id, "Please enter the destination channel ID:")
 
-    return CHOOSING
-
-# Function to get source channel ID
-def choose_source(update: Update, context: CallbackContext) -> int:
-    user_data['source'] = update.message.text
-    update.message.reply_text("Please enter the destination channel ID:")
+# Handle confirming destination channel
+@app.on_message(filters.text & ~filters.command)
+def confirm_destination(bot, update):
+    chat_id = update.chat.id
+    user_data[chat_id]["destination"] = update.text
     
-    return CONFIRM
-
-# Function to get destination channel ID and confirm forwarding
-def confirm_destination(update: Update, context: CallbackContext) -> int:
-    user_data['destination'] = update.message.text
-    source = user_data['source']
-    destination = user_data['destination']
+    # Create inline keyboard with "Yes" and "No" buttons
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Yes", callback_data="yes"), InlineKeyboardButton("No", callback_data="no")]
+    ])
     
-    # Create an InlineKeyboardMarkup with "Yes" and "No" buttons
-    keyboard = [
-        [InlineKeyboardButton("Yes", callback_data="yes"),
-         InlineKeyboardButton("No", callback_data="no")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    update.message.reply_text(f"You want to forward messages from {source} to {destination}. Is that correct?", reply_markup=reply_markup)
-    
-    return CONFIRM
+    bot.send_message(chat_id, f"You want to forward messages from {user_data[chat_id]['source']} to {user_data[chat_id]['destination']}. Is that correct?", reply_markup=keyboard)
 
-# Forward messages function (implement your logic here)
-def forward_message(update: Update, context: CallbackContext) -> None:
-    # Implement your message forwarding logic here
-
-# Callback function for handling button responses
-def button_response(update: Update, context: CallbackContext) -> None:
-    query = update.callback_query
-    if query.data == "yes":
-        query.edit_message_text("Great! Forwarding messages.")
-        forward_message(update, context)
-    elif query.data == "no":
-        query.edit_message_text("Okay, let's start over.")
+# Handle button responses
+@app.on_callback_query()
+def button_response(bot, update):
+    query = update.data
+    chat_id = update.message.chat.id
+    
+    if query == "yes":
+        bot.edit_message_text(chat_id, update.message.message_id, "Great! Forwarding messages.")
+        forward_messages(bot, chat_id)
+    elif query == "no":
+        bot.edit_message_text(chat_id, update.message.message_id, "Okay, let's start over.")
         # Implement handling for "No" response here
 
-def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-    
-    # Conversation handler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            CHOOSING: [MessageHandler(Filters.text & ~Filters.command, choose_source)],
-            CONFIRM: [MessageHandler(Filters.text & ~Filters.command, confirm_destination)]
-        },
-        fallbacks=[],
-    )
-    
-    # Message handler
-    dispatcher.add_handler(conv_handler)
-    dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.command, forward_message))
-    dispatcher.add_handler(CallbackQueryHandler(button_response))
-    
-    updater.start_polling()
-    updater.idle()
+# Forward messages function (implement your logic here)
+def forward_messages(bot, chat_id):
+    # Implement your message forwarding logic here
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    user_data = {}  # Dictionary to store user data
+    app.run()
     
