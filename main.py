@@ -53,6 +53,7 @@ def forward_messages(bot, chat_id):
     # Implement your message forwarding logic here
     
 if __name__ == "__main__":
+elif print ("error")
     user_data = {}  # Dictionary to store user data
     app.run()
     
