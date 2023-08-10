@@ -1,6 +1,6 @@
 import os
-from telegram import Update, InputFile
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
+from telegram import Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext, CallbackQueryHandler
 
 # Set up environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -31,35 +31,31 @@ def confirm_destination(update: Update, context: CallbackContext) -> int:
     source = user_data['source']
     destination = user_data['destination']
     
-    update.message.reply_text(f"You want to forward messages from {source} to {destination}. Is that correct? (yes/no)")
+    # Create an InlineKeyboardMarkup with "Yes" and "No" buttons
+    keyboard = [
+        [InlineKeyboardButton("Yes", callback_data="yes"),
+         InlineKeyboardButton("No", callback_data="no")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    update.message.reply_text(f"You want to forward messages from {source} to {destination}. Is that correct?", reply_markup=reply_markup)
     
     return CONFIRM
 
-# Forward messages function
+# Forward messages function (implement your logic here)
 def forward_message(update: Update, context: CallbackContext) -> None:
-    if update.message.chat_id == ADMIN_ID:
-        message = update.message.reply_to_message
-        if message:
-            source = user_data['source']
-            destination = user_data['destination']
-            
-            if message.text:
-                context.bot.send_message(destination, message.text)
-            elif message.document:
-                context.bot.send_document(destination, document=InputFile(message.document.get_file().download()))
-            elif message.video:
-                context.bot.send_video(destination, video=InputFile(message.video.get_file().download()))
-            elif message.photo:
-                context.bot.send_photo(destination, photo=InputFile(message.photo[-1].get_file().download()))
-                
-# Broadcast message function
-def broadcast(update: Update, context: CallbackContext) -> None:
-    if update.message.from_user.id == ADMIN_ID:
-        users = context.bot.get_chat_members_count(update.message.chat.id)
-        broadcast_message = update.message.text
-        context.bot.send_message(update.message.chat.id, f"Broadcasting to {users} users...")
-        context.bot.send_message(update.message.chat.id, broadcast_message)
-    
+    # Implement your message forwarding logic here
+
+# Callback function for handling button responses
+def button_response(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    if query.data == "yes":
+        query.edit_message_text("Great! Forwarding messages.")
+        forward_message(update, context)
+    elif query.data == "no":
+        query.edit_message_text("Okay, let's start over.")
+        # Implement handling for "No" response here
+
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
@@ -77,7 +73,7 @@ def main():
     # Message handler
     dispatcher.add_handler(conv_handler)
     dispatcher.add_handler(MessageHandler(Filters.all & ~Filters.command, forward_message))
-    dispatcher.add_handler(MessageHandler(Filters.command(['broadcast']), broadcast))
+    dispatcher.add_handler(CallbackQueryHandler(button_response))
     
     updater.start_polling()
     updater.idle()
