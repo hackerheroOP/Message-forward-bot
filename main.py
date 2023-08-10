@@ -47,7 +47,7 @@ def forward_message(update: Update, context: CallbackContext) -> None:
     # Implement your message forwarding logic here
 
 # Callback function for handling button responses
-def button_response(update: Update, context: CallbackContext) -> None:
+#def button_response(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     if query.data == "yes":
         query.edit_message_text("Great! Forwarding messages.")
