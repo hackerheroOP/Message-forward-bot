@@ -55,7 +55,7 @@ def button_response(update: Update, context: CallbackContext) -> None:
     elif query.data == "no":
         query.edit_message_text("Okay, let's start over.")
         # Implement handling for "No" response here
-
+    
 def main():
     updater = Updater(BOT_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
