@@ -9,6 +9,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# Dictionary to store user data
+user_data = {}
+
 # Handle /start command
 @app.on_message(filters.command("start"))
 def start(bot, update):
@@ -19,6 +22,7 @@ def start(bot, update):
 @app.on_message(filters.text & ~filters.command)
 def choose_source(bot, update):
     chat_id = update.chat.id
+    user_data[chat_id] = {}  # Initialize user data dictionary
     user_data[chat_id]["source"] = update.text
     bot.send_message(chat_id, "Please enter the destination channel ID:")
 
@@ -51,9 +55,8 @@ def button_response(bot, update):
 # Forward messages function (implement your logic here)
 def forward_messages(bot, chat_id):
     # Implement your message forwarding logic here
-    
+    pass
 
-    user_data = {}  # Dictionary to store user data
-   app = bot()
+if __name__ == "__main__":
     app.run()
     
